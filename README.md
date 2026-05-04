@@ -16,7 +16,7 @@ This solution implements an **Intelligent Account Servicing Workflow (IASW)** th
 
 ### Key Achievement
 ✅ **Complete end-to-end working prototype** of Legal Name Change flow  
-✅ **Local Llama model** from Hugging Face (no API calls)  
+✅ **Local Qwen2.5-VL model** from Hugging Face (no API calls)  
 ✅ **Strict HITL boundary** - AI never writes to RPS autonomously  
 ✅ **Full observability** - Comprehensive logging and audit trail  
 
@@ -48,7 +48,7 @@ This solution implements an **Intelligent Account Servicing Workflow (IASW)** th
 ### Solution Scope
 This prototype implements:
 - ✅ **Legal Name Change** flow (complete end-to-end)
-- ✅ AI-powered document processing with **local Llama 3.2 3B Instruct**
+- ✅ AI-powered document processing with **local Qwen2.5-VL-7B-Instruct**
 - ✅ OCR extraction using Tesseract
 - ✅ Confidence scoring and forgery detection
 - ✅ Human checker approval interface
@@ -99,7 +99,7 @@ This prototype implements:
 │  ┌──────────────────────────────────────────────┐  │
 │  │  AI/ML Layer                                 │  │
 │  │  ┌───────────────────────────────────────┐  │  │
-│  │  │  Local Llama 3.2 3B Instruct         │  │  │
+│  │  │  Local Qwen2.5-VL-7B-Instruct        │  │  │
 │  │  │  (Hugging Face Transformers)         │  │  │
 │  │  └───────────────────────────────────────┘  │  │
 │  │  ┌───────────────────────────────────────┐  │  │
@@ -130,7 +130,7 @@ Staff Submission → Validation Agent → Document Processor Agent
                                               ↓
                                          OCR Engine
                                               ↓
-                                      Local Llama LLM
+                                      Local Qwen2.5-VL (multimodal)
                                               ↓
                                    Confidence Scorer Agent
                                               ↓
@@ -175,7 +175,7 @@ Staff Submission → Validation Agent → Document Processor Agent
 | **Responsibility** | OCR + extraction + forgery detection + FileNet archival |
 | **Input** | Uploaded document (file_path), change_type, document_type |
 | **Output** | DocumentProcessingResult (extracted_data, ocr_confidence, forgery_detected, filenet_reference) |
-| **Logic** | • Perform OCR with Tesseract<br>• Extract structured data with Llama LLM<br>• Run forgery detection<br>• Generate FileNet reference |
+| **Logic** | • Perform OCR with Tesseract<br>• Extract structured data with Qwen2.5-VL<br>• Run forgery detection<br>• Generate FileNet reference |
 
 **Implementation**: `backend/agents/document_processor_agent.py`
 
@@ -197,7 +197,7 @@ Staff Submission → Validation Agent → Document Processor Agent
 | **Responsibility** | Generate human-readable summary for checker |
 | **Input** | ConfidenceScoreCard + extracted data |
 | **Output** | Natural language summary + recommended action |
-| **Logic** | • Use Llama LLM to generate 2-3 sentence summary<br>• Fallback to template if LLM fails |
+| **Logic** | • Use Qwen2.5-VL to generate 2-3 sentence summary<br>• Fallback to template if LLM fails |
 
 **Implementation**: Within `ConfidenceScorerAgent._generate_summary()`
 
@@ -210,14 +210,14 @@ Staff Submission → Validation Agent → Document Processor Agent
 | **Frontend** | HTML + Vanilla JavaScript | • Simple, no build step required<br>• Easy to demo and test<br>• Production would use React/Next.js |
 | **Backend API** | FastAPI | • Fast, modern Python framework<br>• Automatic OpenAPI docs<br>• Async support for scalability<br>• Type hints with Pydantic |
 | **Orchestration** | Native Python (no framework) | • Agents are simple enough to not require LangChain overhead<br>• Production could add LangGraph for complex workflows<br>• Keeps dependencies minimal |
-| **LLM** | **Llama 3.2 3B Instruct** (local) | • Downloaded from Hugging Face<br>• Runs locally without API calls<br>• Cost-effective for production<br>• 3B model is fast for CPU inference<br>• Instruction-tuned for structured tasks |
+| **LLM** | **Qwen2.5-VL-7B-Instruct** (local, multimodal) | • Downloaded from Hugging Face<br>• Runs locally without API calls<br>• Handles text **and** document images in one pass<br>• Instruction-tuned for structured extraction<br>• `IASW_FAST_MODE=1` bypasses the model for instant demo submissions |
 | **LLM Runtime** | Hugging Face Transformers + PyTorch | • Industry standard for local LLM inference<br>• GPU acceleration when available<br>• Easy model loading and management |
 | **OCR** | Tesseract | • Free, open-source, production-ready<br>• Supports 100+ languages<br>• Production upgrade: AWS Textract or Google Document AI |
 | **Database** | SQLite | • Zero-config for prototype<br>• Production: PostgreSQL with connection pooling |
 | **Document Store** | Local filesystem | • Mock implementation<br>• Production: S3 or FileNet integration |
 | **Observability** | Python logging + structured logs | • File-based logs with rotation<br>• Production: ELK stack or Datadog |
 
-### Why Local Llama over API-based LLMs?
+### Why a Local Qwen2.5-VL Model over API-based LLMs?
 
 1. **Cost**: No per-token charges, unlimited inference
 2. **Privacy**: Sensitive banking data stays on-premises
@@ -229,7 +229,7 @@ Staff Submission → Validation Agent → Document Processor Agent
 
 | Decision | Alternative | Why Chosen |
 |----------|------------|------------|
-| Llama 3.2 3B | GPT-4, Claude | Local deployment, no API costs, data privacy |
+| Qwen2.5-VL-7B-Instruct | GPT-4, Claude | Local deployment, multimodal, no API costs, data privacy |
 | Tesseract OCR | AWS Textract | Free, good quality, sufficient for prototype |
 | SQLite | PostgreSQL | Simpler setup, production-ready migration path |
 | Vanilla JS | React | Faster prototype, no build complexity |
@@ -281,17 +281,20 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### Step 5: Download Llama Model
+### Step 5: Download the Qwen2.5-VL Model (optional)
+
+Fast mode is **on by default** (`IASW_FAST_MODE=1`) and skips the model entirely, so the app runs end-to-end without any download. Only follow this step if you want the full VL pipeline.
 
 ```bash
 # Set your Hugging Face token (get from https://huggingface.co/settings/tokens)
 export HF_TOKEN="your_huggingface_token_here"
 
-# Download Llama model
-python download_llama.py
+# Download Qwen2.5-VL-7B-Instruct (~15 GB; saved to llama-models/qwen2.5-vl-7b-instruct/
+# — the legacy folder name is preserved to avoid breaking existing paths)
+huggingface-cli download Qwen/Qwen2.5-VL-7B-Instruct --local-dir llama-models/qwen2.5-vl-7b-instruct
 ```
 
-**Note**: The Llama model is ~7GB. Download will take 10-30 minutes depending on connection.
+**Note**: the model is ~15 GB. Download takes 20-60 minutes depending on connection. Then start the backend with `IASW_FAST_MODE=0` to use it.
 
 ### Step 6: Verify Installation
 
@@ -651,7 +654,7 @@ FROM pending_requests;
 
 ### Constraints
 
-1. **Model Size**: Llama 3.2 3B is smaller than GPT-4, less nuanced understanding
+1. **Model Size**: Qwen2.5-VL 7B is smaller than GPT-4 / Claude Opus, less nuanced understanding
 2. **OCR Accuracy**: Tesseract may struggle with handwritten text or poor scans
 3. **Forgery Detection**: Rule-based, not deep learning (production needs CV models)
 4. **Scalability**: Single-process server, not horizontally scaled
@@ -659,11 +662,11 @@ FROM pending_requests;
 
 ### Known Limitations
 
-#### 1. Llama Model Performance
+#### 1. Qwen2.5-VL Model Performance
 
-- **Issue**: 3B model may miss subtle context or produce inconsistent JSON
-- **Mitigation**: JSON extraction includes fallback parsing logic
-- **Production Fix**: Upgrade to Llama 3 70B or fine-tune on banking documents
+- **Issue**: 7B multimodal model on CPU is slow (~10 min per submission) and may miss subtle context
+- **Mitigation**: `IASW_FAST_MODE=1` (default) bypasses the model and uses regex-over-OCR for demo speed; JSON extraction has fallback parsing
+- **Production Fix**: Upgrade to a larger VL model, run on GPU, or fine-tune on banking documents
 
 #### 2. OCR Quality
 
@@ -817,7 +820,7 @@ def test_hitl_boundary():
 - [✅] Architecture diagram (ASCII art + description)
 - [✅] Agent design documentation
 - [✅] Complete Legal Name Change flow
-- [✅] Local Llama model integration
+- [✅] Local Qwen2.5-VL model integration
 - [✅] Frontend for staff and checker
 - [✅] Database schema with audit logs
 - [✅] Mock RPS and FileNet services
@@ -857,7 +860,7 @@ def test_hitl_boundary():
 For questions or issues:
 - Check logs in `logs/iasw.log`
 - Review database with `sqlite3 backend/iasw.db`
-- Verify Llama model: `ls -lh llama-models/`
+- Verify Qwen2.5-VL model: `ls -lh llama-models/qwen2.5-vl-7b-instruct/` (folder kept under `llama-models/` for backward compatibility)
 
 ---
 
