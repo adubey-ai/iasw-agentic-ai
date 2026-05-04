@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+.claude/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# LLM Models (large files)
+llama-models/
+*.bin
+*.safetensors
+*.gguf
+
+# Documents (may contain sensitive data)
+data/documents/*.pdf
+data/documents/*.jpg
+data/documents/*.png
+!data/documents/test_*.png
+!data/documents/test_*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Environment
+.env
+.env.local
+
+# Demo recording / extracted frames (never commit large video assets)
+*.mov
+*.mp4
+*.webm
+Copy of iasw.mov
+iasw_frames/
+iasw_frames2/
+frames/
+frame_*.jpg
+frame_*.png
